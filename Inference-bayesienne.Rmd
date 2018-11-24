@@ -1,0 +1,329 @@
+---
+title: "Inférence bayesienne"
+author:
+  - name: Eric Marcon
+abstract: >
+  Présentation pas à pas de la méthode.
+date: "`r format(Sys.time(), '%d %B %Y')`"
+pdftoc: yes
+preamble: >
+  \usepackage{textcomp}
+  \DeclareUnicodeCharacter{B0}{\textdegree}
+  \hyphenation{bio-di-ver-si-ty sap-lings}
+bibliography: references.bib
+lang: french # english
+always_allow_html: yes
+output:
+  bookdown::pdf_book:
+    base_format: EcoFoG::memo
+    keep_tex: TRUE
+  bookdown::gitbook: 
+    config:
+      download: null
+  bookdown::word_document2: default
+  bookdown::html_document2:
+    toc: yes
+    toc_float: yes
+    highlight: haddock
+---
+
+```{r Options, echo=FALSE, message=FALSE}
+knitr::opts_chunk$set(cache=FALSE, echo = TRUE, tidy=TRUE, tidy.opts=list(blank=FALSE, width.cutoff=50), out.width='\\maxwidth')
+options(width=50)
+# Installation des packages si nécessaire et chargement
+Library <- function(Packages) {
+  InstallAndLoad <- function(Package) {
+    if (!Package %in% installed.packages()[, 1]) {install.packages(Package, repos="https://cran.rstudio.com/")}
+    require(Package, character.only = TRUE)
+  }
+  invisible(sapply(Packages, InstallAndLoad))
+}
+# Ajouter les packages nécessaires ici
+Library(c("kableExtra", "tidyverse"))
+```
+
+<!-- Début du document ci-dessous --> 
+
+
+# Principes
+
+D'après le théorème de Bayes, la vraisemblance du vecteur de paramètres d'un modèle sachant les données est proportionnelle à vraisemblance des paramètres (selon leur distribution *a priori*) multipliée par la vraisemblance des données (selon le modèle) sachant le vecteur de paramètres.
+
+L'élément manquant pour écrire tous les termes du théorème de Bayes est la vraisemblance (intrinsèque) des données, qui n'est pas connue mais est constante et n'intervient donc pas dans l'inférence.
+La distribution du vecteur de paramètres est donc estimée en maximisant le produit des vraisemblances (en pratique, la somme de leurs logarithmes) des paramètres et des données.
+
+
+# Modèle
+
+L'objectif est l'estimation des paramètre du modèle $y = a x + b + \epsilon$ où $\epsilon$ suit une loi normale.
+
+Les données sont constituées par les vecteurs $\mathbf{Y}$ et $\mathbf{X}$.
+
+Le modèle est une représentation de la réalité choisie par le modélisateur : ici, une relation linéaire entre $\mathbf{Y}$ et $\mathbf{X}$, avec une erreur gaussienne d'écart-type $\sigma$ .
+
+Les paramètres $a$, $b$ et $\sigma$ sont à estimer.
+On les regroupe classiquement dans un vecteur de paramètres appelé $\theta$.
+Dans le cadre bayesien, le résultat de l'estimation sera la densité de probabilité de chaque paramètre, sachant les données.
+
+
+## Fabrication des données
+
+Pour illustrer le fonctionnement de l'inférence, des données sont d'abord simulées:
+
+```{r Simulations}
+# Paramètres
+a <- 10
+b <- 2
+sigma <- 20
+n <- 50
+# Données
+X <- runif(n, min=-5, max=5)
+Y <- a + b*X + rnorm(n, 0, sigma)
+```
+
+Les données simulées sont présentées sur la figure :
+
+```{r DonneesSimulees}
+plot(Y~X)
+```
+
+
+# Inférence
+
+L'inférence de $\theta$ est faite en maximisant la vraisemblance de $\theta|\mathbf{Y}$, appelée distribution _a posteriori_ de $\theta$ ou plus simplement _posterior_.
+
+La vraisemblance de $\theta|\mathbf{Y}$ est proportionnelle au produit des vraisemblances de $\mathbf{Y}|\theta$ et de la valeur _a priori_ (c'est-à-dire avant de connaître les données) de $\theta$.
+Chacune des deux vraisemblances doit être écrite en foncton de $\theta$.
+
+
+## Vraisemblance de $\mathbf{Y}|\theta$
+
+Les paramètres sont recherchés par un algorithme de proposition présenté plus loin.
+A chaque proposition, la vraisemblance de $\mathbf{Y}|\theta$ est calculée.
+
+Le logarithme de la vraisemblance des données $\mathbf{Y}|\theta$ (sachant les paramètres) dépend du modèle d'erreur : étant donné $\mathbf{X}$ et $\theta$, chaque valeur $y_i$ de $\mathbf{Y}$ suit ici une loi normale d'espérance $a + bx_i$ et d'écart-type $sigma$.
+Le logarithme de la vraisemblance de chaque valeur de $\mathbf{Y}$ est calculée par la fonction `dnorm`.
+La vraisemblance de $\mathbf{Y}$ est le produit des vraisemblances des $y_i$ : la somme des logarithmes de vraisemblance des $y_i$ est donc retournée.
+
+```{r Vraisemblance_Y}
+ll_Y_theta <- function(Y, X, theta){
+  a <- theta[1]
+  b <- theta[2]
+  sigma <- theta[3]
+  # Valeur prédite par le modèle
+  prediction <- a + b*X
+  # Log-vraisemblance de chaque valeur de y
+  single_likelihoods <- dnorm(Y, mean = prediction, sd = sigma, log = TRUE) 
+  return (sum(single_likelihoods))
+}
+```
+
+Cette fonction doit être réécrite si le modèle est différent.
+
+
+## Vraisemblance _a priori_ de $\theta$
+
+La distribution *a priori* des paramètres est choisie par le modélisateur. 
+Elle peut correspondre à une connaissance d'expert ou au contraire être très peu informative.
+
+Ici, la distribution de $a$ et $b$ est _a priori_ uniforme entre -100 et 100 : la vraisemblance des paramètres sera toujours identique dans ces intervalles qui contiennent forcément toutes les valeurs proposables des paramètres étant donné l'ordre de grandeur des données.
+Ce sont donc des priors aussi peu informatifs que possible.
+L'écart-type de l'erreur du modèle est choisie dans une distribution uniforme entre 0 et 30, pour les mêmes raisons.
+
+La somme des logarithmes de vraisemblance des paramètres est retournée. 
+
+```{r Prior}
+ll_prior <- function(theta){
+  a <- theta[1]
+  b <- theta[2]
+  sigma <- theta[3]
+  # Log-vraisemblance de chaque paramètre dans sa loi a priori
+  a_prior <- dunif(a, min=-100, max=100, log=TRUE)
+  b_prior <- dunif(b, min=-100, max=100, log=TRUE)
+  sigma_prior <- dunif(sigma, min=0, max=30, log=TRUE)
+  return(a_prior+b_prior+sigma_prior)
+}
+```
+
+Cette fonction doit être réécrite si le modèle est différent. 
+
+## Vraisemblance de $\theta|\mathbf{Y}$
+
+Le logarithme de la vraisemblance des paramètres sachant les données, $\theta|\mathbf{Y}$, est à une constante près la somme des logarithmes de vraisemblance des données et des paramètres:
+
+```{r Posterior}
+ll_posterior <- function(Y, X, theta){
+  return (ll_Y_theta(Y, X, theta) + ll_prior(theta))
+}
+```
+
+Cette fonction permet de calculer, pour toute proposition de $\theta$, le logarithme de sa vraisemblance (à une constante près, simplement ignorée).
+
+
+## Fonction de proposition
+
+La fonction de propostion permet d'explorer l'espace des paramètres, c'est-à-dire toutes les valeurs possibles de $\theta$.
+Ici, il s'agit d'un espace en trois dimensions correspondant aux valeurs possibles de $a$, $b$ et $\sigma$. 
+C'est un parallélépipède borné par les valeurs -100 et 100 pour $a$ et $b$, et 0 et 30 pour $\sigma$ : les autres valeurs sont interdites par la loi _a priori_ qui leur donne une vraisemblance nulle.
+
+La fonction la plus simple est une marche aléatoire :
+
+```{r proposalfunction}
+proposal <- function(theta, sigma_prop){
+  return(rnorm(length(theta) , mean = theta, sd = sigma_prop))
+}
+```
+
+A partir d'une valeur de $\theta$, une nouvelle valeur est retournée dans son voisinage.
+La différence de valeur de chaque paramètre est tiré dans une loi normale d'écart-type `sigma_prop` fixé par le modélisateur (appelé pas de la marche aléatoire).
+Si le pas est trop petit, l'exploration de l'espace des paramètres sera inutilement longue et pourra même rester bloquée dans des régions correspondant à des maximums locaux de vraisemblance.
+Si le pas est trop grand, l'exploration sera trop grossière pour détecter des régions intéressantes.
+
+
+## Chaine de Markov
+
+L'inférence est réalisée par une chaîne de Markov.
+A partir d'une valeur initiale de $\theta$, `theta_0`, une proposition d'un nouveau vecteur $\theta$ est faite.
+Le rapport des vraisemblances entre la proposition et la valeur originale de $\theta$ est calculé. 
+La proposition est acceptée d'autant plus probablement que ce rapport est élevé. 
+Un nombre aléatoire est tiré dans une loi uniforme entre 0 et 1 pour fixer un seuil d'acceptation.
+Si le rapport de vraisemblance est supérieur au seuil d'acceptation (c'est toujours le cas si la vraisemblance est améliorée) alors la proposition est acceptée.
+Si elle est refusée, $\theta$ ne change pas.
+L'opération est répétée un grand nombre de fois (`iterations`).
+Après un certain nombre d'itérations, `burn_in` (préchauffage), la chaîne de Markov est supposée converger vers une région où les paramètres vont se stabiliser avec une grande vraisemblance.
+
+Les valeurs de $\theta$ et de log-vraisemblance, à chaque itération, sont enregistrées.
+
+
+```{r MetropolisMCMC}
+MetropolisMCMC <- function(Y, X, sigma_prop, theta_0, iterations){
+  # Stockage. Chaque ligne du tableau contient une itération ; les colonnes contiennent theta
+  chain <- matrix(nrow = iterations+1, ncol = length(theta_0))
+  # Noms des paramètres
+  colnames(chain) <- names(theta_0)
+  # Stockage des vraisemblances
+  ll_data <- numeric(length = iterations+1)
+  # Valeurs initiales
+  chain[1, ] <- theta_0
+  ll_data[1] <- ll_Y_theta(Y, X, theta_0)
+  # Initialisation d'une barre de progression
+  pgb <- txtProgressBar(min=0, max=iterations)
+  # Chaîne de Markov
+  for (i in 1:iterations){
+    # Proposition d'une valeur de theta
+    theta_proposal <- proposal(chain[i,], sigma_prop)
+    # Rapport de vraisemblance entre la proposition et la valeur précédente de theta
+    l_ratio <- exp(ll_posterior(Y, X, theta_proposal) - ll_posterior(Y, X, chain[i, ]))
+    # Acceptation ou non
+    if (runif(1) < l_ratio) {
+      chain[i+1, ] <- theta_proposal
+    } else {
+      chain[i+1, ] <- chain[i, ]
+    }
+    # Enregistrement de la vraisemblance de Y sachant theta
+    ll_data[i+1] <- ll_Y_theta(Y, X, chain[i+1, ])
+    setTxtProgressBar(pgb, i)
+  }
+  # Retour d'un tableau complet: theta et vraisemblance
+  return(cbind(chain, LogVraisemblance = ll_data))
+}
+```
+
+
+## Exécution
+
+Le nombre d'itération doit être grand.
+La taille des pas de la marche aléatoire est affaire d'expérience : les écarts-types de la marche aléatoire doivent être augmentés pour diminuer le taux d'acceptation (objectif : 30%).
+La valeur de départ des paramètres est choisie aléatoirement dans l'espace des possibles, en cohérence avec la distribution _a priori_.
+Elle doit être possible (la vraisemblance des paramètres ne doit pas être nulle).
+
+```{r Execution}
+# Nombre de pas de la chaîne
+iterations <- 1E6
+# Ecart-type de la marche aléatoire (pour chaque paramètre)
+sigma_prop <- c(1, 1, 2)
+# Valeur initiale des paramètres
+theta_0 <- c(runif(2, min=-100, max=100), runif(1, min=0, max=30))
+names(theta_0) <- c("Intercept", "Pente", "EcartType")
+# Lancement de la chaîne de Markov
+chain <- MetropolisMCMC(Y, X, sigma_prop, theta_0, iterations)
+```
+
+
+## Vérification de la convergence
+
+La vraisemblance des données doit augmenter pendant le préchauffage et se stabiliser ensuite.
+Les données de préchauffage (ici, les 10000 premières valeurs)  sont éliminées.
+
+
+```{r Convergence}
+# Evolution de la vraisemblance
+par(mfrow = c(1,2))
+plot(chain[, length(theta_0)+1], type="l", main="Evolution de la vraisemblance", xlab="Pas", ylab="log Vraisemblance")
+burn_in <- 5E3
+plot(chain[-(1:burn_in), length(theta_0)+1], type="l", main="Après convergence", xlab="Pas", ylab="log Vraisemblace")
+# Taux d'acceptation de la chaine de Markov
+(acceptance <- 1-mean(duplicated(chain[-(1:burn_in),])))
+```
+
+## Distribution des paramètres *a posteriori*
+
+La distribution des paramètres est le résultat de l'inférence.
+
+```{r Resultats}
+par(mfrow = c(1, length(theta_0)))
+for (i in 1:length(theta_0)){
+  Titre <- paste("Distribution de", names(theta_0)[i])
+  Mediane <- format(median(chain[-(1:burn_in), i]), digits = 4)
+  hist(chain[-(1:burn_in), i], xlab=paste("Mediane :", Mediane),  main=Titre)
+  abline(v=Mediane, col="red")
+}
+```
+
+Les valeurs médianes peuvent être comparées à l'estimation fréquentiste :
+
+```{r}
+summary(flm <- lm(Y ~ X))
+```
+
+
+## Autocorrélation dans la chaîne
+
+L'observation de l'autocorrélation entre les valeurs des paramètres permet de décider d'éclaircir les résultats de la chaîne de Markov.
+Ici, l'autocorrélation est faible pour l'intercept et nulle pour les autres paramètres à un décalage de 50 pas.
+
+```{r Autocorrelation}
+acf(chain[-(1:burn_in), -ncol(chain)], lag.max=100)
+```
+
+La distribution des paramètres est mieux estimée en ne retenant qu'un pas sur 50.
+
+```{r}
+# Distribution a posteriori. Elimination du prechauffage et de la vraisemblance, éclaircie.
+posterior <- chain[-(1:burn_in), -ncol(chain)][seq(1, iterations-burn_in, by=50), ]
+```
+
+
+## Nouvelle distribution des paramètres *a posteriori*
+
+La distribution après éclaircie est peu modifiée.
+
+```{r ResultatsEclaircis}
+par(mfrow = c(1, length(theta_0)))
+for (i in 1:length(theta_0)){
+  Titre <- paste("Distribution de", names(theta_0)[i])
+  Mediane <- format(median(posterior[, i]), digits = 4)
+  hist(posterior[, i], xlab=paste("Mediane :", Mediane),  main=Titre)
+  abline(v=Mediane, col="red")
+}
+```
+
+
+## Corrélation entre les paramètres
+
+La corrélation entre les paramètres est calculée à partir de leur distribution.
+
+```{r Correlation}
+cor(posterior)
+```
+
