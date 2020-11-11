@@ -46,3 +46,4 @@
 
 # Spécifique
 /*.rds
+.Rproj.user
