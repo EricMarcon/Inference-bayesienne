@@ -11,20 +11,21 @@ preamble: >
   \DeclareUnicodeCharacter{B0}{\textdegree}
   \hyphenation{bio-di-ver-si-ty sap-lings}
 bibliography: references.bib
-lang: french # english
+lang: fr-FR # en-US
+babel: french # english
 always_allow_html: yes
 output:
-  bookdown::pdf_book:
-    base_format: EcoFoG::memo
-    keep_tex: TRUE
-  bookdown::gitbook: 
-    config:
-      download: null
-  bookdown::word_document2: default
   bookdown::html_document2:
     toc: yes
     toc_float: yes
     highlight: haddock
+  bookdown::gitbook: 
+    config:
+      download: null
+  bookdown::word_document2: default
+  bookdown::pdf_book:
+    base_format: EcoFoG::memo
+    keep_tex: TRUE
 ---
 
 ```{r Options, echo=FALSE, message=FALSE}
@@ -101,7 +102,7 @@ Chacune des deux vraisemblances doit être écrite en foncton de $\theta$.
 Les paramètres sont recherchés par un algorithme de proposition présenté plus loin.
 A chaque proposition, la vraisemblance de $\mathbf{Y}|\theta$ est calculée.
 
-Le logarithme de la vraisemblance des données $\mathbf{Y}|\theta$ (sachant les paramètres) dépend du modèle d'erreur : étant donné $\mathbf{X}$ et $\theta$, chaque valeur $y_i$ de $\mathbf{Y}$ suit ici une loi normale d'espérance $a + bx_i$ et d'écart-type $sigma$.
+Le logarithme de la vraisemblance des données $\mathbf{Y}|\theta$ (sachant les paramètres) dépend du modèle d'erreur : étant donné $\mathbf{X}$ et $\theta$, chaque valeur $y_i$ de $\mathbf{Y}$ suit ici une loi normale d'espérance $a + bx_i$ et d'écart-type $\sigma$.
 Le logarithme de la vraisemblance de chaque valeur de $\mathbf{Y}$ est calculée par la fonction `dnorm`.
 La vraisemblance de $\mathbf{Y}$ est le produit des vraisemblances des $y_i$ : la somme des logarithmes de vraisemblance des $y_i$ est donc retournée.
 
@@ -250,6 +251,8 @@ chain <- MetropolisMCMC(Y, X, sigma_prop, theta_0, iterations)
 ```
 
 
+# Résultats
+
 ## Vérification de la convergence
 
 La vraisemblance des données doit augmenter pendant le préchauffage et se stabiliser ensuite.
@@ -278,12 +281,6 @@ for (i in 1:length(theta_0)){
   hist(chain[-(1:burn_in), i], xlab=paste("Mediane :", Mediane),  main=Titre)
   abline(v=Mediane, col="red")
 }
-```
-
-Les valeurs médianes peuvent être comparées à l'estimation fréquentiste :
-
-```{r}
-summary(flm <- lm(Y ~ X))
 ```
 
 
@@ -318,6 +315,12 @@ for (i in 1:length(theta_0)){
 }
 ```
 
+Les valeurs médianes peuvent être comparées à l'estimation fréquentiste :
+
+```{r}
+summary(flm <- lm(Y ~ X))
+```
+
 
 ## Corrélation entre les paramètres
 
@@ -326,4 +329,3 @@ La corrélation entre les paramètres est calculée à partir de leur distributi
 ```{r Correlation}
 cor(posterior)
 ```
-
