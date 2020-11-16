@@ -16,17 +16,17 @@ lang: fr-FR # en-US
 babel: french # english
 always_allow_html: yes
 output:
-  bookdown::pdf_book:
-    base_format: EcoFoG::memo
-    keep_tex: TRUE
-  bookdown::gitbook: 
-    config:
-      download: null
-  bookdown::word_document2: default
   bookdown::html_document2:
     toc: yes
     toc_float: yes
     highlight: haddock
+  bookdown::gitbook: 
+    config:
+      download: null
+  bookdown::word_document2: default
+  bookdown::pdf_book:
+    base_format: EcoFoG::memo
+    keep_tex: TRUE
 ---
 
 ```{r Options, echo=FALSE, message=FALSE}
@@ -96,7 +96,7 @@ La variance du modèle est volontairement très grande pour que l'estimation des
 
 L'inférence de $\theta$ est faite en maximisant la vraisemblance de $\theta|\mathbf{Y}$, appelée distribution _a posteriori_ de $\theta$ ou plus simplement _posterior_.
 
-La vraisemblance de $\theta|\mathbf{Y}$ est proportionnelle au produit des vraisemblances de $\mathbf{Y}|\theta$ et de la valeur _a priori_ (c'est-à-dire avant de connaître les données) de $\theta$.
+La vraisemblance de $\theta|\mathbf{Y}$ est proportionnelle au produit des vraisemblances de $\mathbf{Y}|\theta$ et de celle des paramètres estimés dans la distribution _a priori_ (c'est-à-dire avant de connaître les données) de $\theta$, appelée _prior_.
 Chacune des deux vraisemblances doit être écrite en fonction de $\theta$.
 
 
@@ -166,6 +166,13 @@ ll_posterior <- function(Y, X, theta){
 ```
 
 Cette fonction permet de calculer, pour toute proposition de $\theta$, le logarithme de sa vraisemblance (à une constante près, simplement ignorée).
+
+La construction de la vraisemblance permet de comprendre le poids relatif des données et du prior.
+Les log-vraisemblances sont sommées.
+Chaque observation $y_i$ contribue pour un terme de la somme, de même que chaque paramètre:
+
+- Augmenter le nombre d'observations diminue le poids relatif du prior;
+- Les priors peu informatifs dont la vraisemblance varie peu influent peu sur la recherche du maximum de vraisemblance.
 
 
 ## Fonction de proposition
