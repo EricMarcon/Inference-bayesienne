@@ -270,7 +270,7 @@ Les données de préchauffage (ici, les 10000 premières valeurs)  sont élimin�
 # Evolution de la vraisemblance
 par(mfrow = c(1,2))
 plot(chain[, length(theta_0)+1], type="l", main="Evolution de la vraisemblance", xlab="Pas", ylab="log Vraisemblance")
-burn_in <- 5E3
+burn_in <- 1E4
 plot(chain[-(1:burn_in), length(theta_0)+1], type="l", main="Après convergence", xlab="Pas", ylab="log Vraisemblace")
 # Taux d'acceptation de la chaine de Markov
 (acceptance <- 1-mean(duplicated(chain[-(1:burn_in),])))
