@@ -4,6 +4,7 @@ author:
   - name: Eric Marcon
 abstract: >
   Présentation pas à pas de la méthode.
+  Adaptation d'un code original de Bruno Hérault.
 date: "`r format(Sys.time(), '%d %B %Y')`"
 pdftoc: yes
 preamble: >
@@ -15,17 +16,17 @@ lang: fr-FR # en-US
 babel: french # english
 always_allow_html: yes
 output:
-  bookdown::html_document2:
-    toc: yes
-    toc_float: yes
-    highlight: haddock
+  bookdown::pdf_book:
+    base_format: EcoFoG::memo
+    keep_tex: TRUE
   bookdown::gitbook: 
     config:
       download: null
   bookdown::word_document2: default
-  bookdown::pdf_book:
-    base_format: EcoFoG::memo
-    keep_tex: TRUE
+  bookdown::html_document2:
+    toc: yes
+    toc_float: yes
+    highlight: haddock
 ---
 
 ```{r Options, echo=FALSE, message=FALSE}
@@ -88,13 +89,15 @@ Les données simulées sont présentées sur la figure :
 plot(Y~X)
 ```
 
+La variance du modèle est volontairement très grande pour que l'estimation des paramètres soit difficile.
+
 
 # Inférence
 
 L'inférence de $\theta$ est faite en maximisant la vraisemblance de $\theta|\mathbf{Y}$, appelée distribution _a posteriori_ de $\theta$ ou plus simplement _posterior_.
 
 La vraisemblance de $\theta|\mathbf{Y}$ est proportionnelle au produit des vraisemblances de $\mathbf{Y}|\theta$ et de la valeur _a priori_ (c'est-à-dire avant de connaître les données) de $\theta$.
-Chacune des deux vraisemblances doit être écrite en foncton de $\theta$.
+Chacune des deux vraisemblances doit être écrite en fonction de $\theta$.
 
 
 ## Vraisemblance de $\mathbf{Y}|\theta$
@@ -114,8 +117,12 @@ ll_Y_theta <- function(Y, X, theta){
   # Valeur prédite par le modèle
   prediction <- a + b*X
   # Log-vraisemblance de chaque valeur de y
-  single_likelihoods <- dnorm(Y, mean = prediction, sd = sigma, log = TRUE) 
-  return (sum(single_likelihoods))
+  single_likelihoods <- dnorm(Y, mean = prediction, sd = sigma, log = TRUE)
+  # Possibilité de NaN si sd proposé négatif par exemple
+  ll <- sum(single_likelihoods)
+  # Vraisemblance nulle dans ce cas
+  if (is.na(ll)) ll <- -Inf
+  return (ll)
 }
 ```
 
@@ -142,7 +149,7 @@ ll_prior <- function(theta){
   a_prior <- dunif(a, min=-100, max=100, log=TRUE)
   b_prior <- dunif(b, min=-100, max=100, log=TRUE)
   sigma_prior <- dunif(sigma, min=0, max=30, log=TRUE)
-  return(a_prior+b_prior+sigma_prior)
+  return(a_prior + b_prior + sigma_prior)
 }
 ```
 
@@ -163,7 +170,7 @@ Cette fonction permet de calculer, pour toute proposition de $\theta$, le logari
 
 ## Fonction de proposition
 
-La fonction de propostion permet d'explorer l'espace des paramètres, c'est-à-dire toutes les valeurs possibles de $\theta$.
+La fonction de proposition permet d'explorer l'espace des paramètres, c'est-à-dire toutes les valeurs possibles de $\theta$.
 Ici, il s'agit d'un espace en trois dimensions correspondant aux valeurs possibles de $a$, $b$ et $\sigma$. 
 C'est un parallélépipède borné par les valeurs -100 et 100 pour $a$ et $b$, et 0 et 30 pour $\sigma$ : les autres valeurs sont interdites par la loi _a priori_ qui leur donne une vraisemblance nulle.
 
