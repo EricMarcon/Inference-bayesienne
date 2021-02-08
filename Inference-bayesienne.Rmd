@@ -243,7 +243,7 @@ MetropolisMCMC <- function(Y, X, sigma_prop, theta_0, iterations){
 
 ## Exécution
 
-Le nombre d'itération doit être grand.
+Le nombre d'itérations doit être grand.
 La taille des pas de la marche aléatoire est affaire d'expérience : les écarts-types de la marche aléatoire doivent être augmentés pour diminuer le taux d'acceptation (objectif : 30%).
 La valeur de départ des paramètres est choisie aléatoirement dans l'espace des possibles, en cohérence avec la distribution _a priori_.
 Elle doit être possible (la vraisemblance des paramètres ne doit pas être nulle).
@@ -252,7 +252,7 @@ Elle doit être possible (la vraisemblance des paramètres ne doit pas être nul
 # Nombre de pas de la chaîne
 iterations <- 1E6
 # Ecart-type de la marche aléatoire (pour chaque paramètre)
-sigma_prop <- c(1, 1, 2)
+sigma_prop <- c(1/2, 1/2, 1)
 # Valeur initiale des paramètres
 theta_0 <- c(runif(2, min=-100, max=100), runif(1, min=0, max=30))
 names(theta_0) <- c("Intercept", "Pente", "EcartType")
