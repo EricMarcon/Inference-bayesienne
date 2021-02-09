@@ -252,7 +252,7 @@ Elle doit être possible (la vraisemblance des paramètres ne doit pas être nul
 # Nombre de pas de la chaîne
 iterations <- 1E6
 # Ecart-type de la marche aléatoire (pour chaque paramètre)
-sigma_prop <- c(1/2, 1/2, 1)
+sigma_prop <- c(2, 2, 2)
 # Valeur initiale des paramètres
 theta_0 <- c(runif(2, min=-100, max=100), runif(1, min=0, max=30))
 names(theta_0) <- c("Intercept", "Pente", "EcartType")
