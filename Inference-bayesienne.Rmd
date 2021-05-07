@@ -6,14 +6,9 @@ abstract: >
   Présentation pas à pas de la méthode.
   Adaptation d'un code original de Bruno Hérault.
 date: "`r format(Sys.time(), '%d %B %Y')`"
-pdftoc: yes
-preamble: >
-  \usepackage{textcomp}
-  \DeclareUnicodeCharacter{B0}{\textdegree}
-  \hyphenation{bio-di-ver-si-ty sap-lings}
-bibliography: references.bib
-lang: fr-FR # en-US
-babel: french # english
+url: https://ericmarcon.github.io/Inference-bayesienne/
+lang: fr-FR
+pdftoc: no
 always_allow_html: yes
 output:
   bookdown::html_document2:
@@ -25,19 +20,61 @@ output:
     keep_tex: TRUE
 ---
 
-```{r Options, echo=FALSE, message=FALSE}
-knitr::opts_chunk$set(cache=FALSE, echo = TRUE, tidy=TRUE, tidy.opts=list(blank=FALSE, width.cutoff=50), out.width='\\maxwidth')
-options(width=50)
-# Installation des packages si nécessaire et chargement
-Library <- function(Packages) {
-  InstallAndLoad <- function(Package) {
-    if (!Package %in% installed.packages()[, 1]) {install.packages(Package, repos="https://cran.rstudio.com/")}
-    require(Package, character.only = TRUE)
+```{r DoNotModify, include=FALSE}
+### Utilities. Do not modify.
+# Installation of packages if necessary
+InstallPackages <- function(Packages) {
+  InstallPackage <- function(Package) {
+    if (!Package %in% installed.packages()[, 1]) {
+      install.packages(Package, repos="https://cran.rstudio.com/")
+    }
   }
-  invisible(sapply(Packages, InstallAndLoad))
+  invisible(sapply(Packages, InstallPackage))
 }
-# Ajouter les packages nécessaires ici
-Library(c("kableExtra", "tidyverse"))
+
+# Basic packages
+InstallPackages(c("bookdown", "formatR", "kableExtra", "ragg"))
+
+# kableExtra must be loaded 
+if (knitr::opts_knit$get("rmarkdown.pandoc.to") == "docx") {
+  # Word output (https://stackoverflow.com/questions/35144130/in-knitr-how-can-i-test-for-if-the-output-will-be-pdf-or-word)
+  # Do not use autoformat (https://github.com/haozhu233/kableExtra/issues/308)
+  options(kableExtra.auto_format = FALSE)
+}
+library("kableExtra")
+
+# Chunk font size hook: allows size='small' or any valid Latex font size in chunk options
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+```
+
+```{r Options, include=FALSE}
+### Customized options for this document
+# Add necessary packages here
+Packages <- ""
+# Install them
+InstallPackages(Packages)
+
+# knitr options
+knitr::opts_chunk$set(
+  cache=FALSE, # Cache chunk results
+  echo = TRUE, # Show/Hide R chunks
+  warning=FALSE, # Show/Hide warnings
+  # Figure alignment and size
+  fig.align='center', out.width='80%',
+  # Graphic device
+  dev = "ragg_png",
+  # Code chunk format
+  tidy=TRUE, tidy.opts=list(blank=FALSE, width.cutoff=50),
+  size="scriptsize", knitr.graphics.auto_pdf = TRUE
+  )
+options(width=50)
+
+# Random seed
+set.seed(973)
 ```
 
 <!-- Début du document ci-dessous --> 

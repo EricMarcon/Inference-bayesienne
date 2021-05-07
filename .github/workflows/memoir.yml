@@ -1,7 +1,7 @@
 on:
   push:
-     branches:
-       - master
+   branches:
+     - master
 
 name: rmarkdown
 
@@ -15,30 +15,23 @@ jobs:
         uses: r-lib/actions/setup-r@v1
       - name: Install pandoc
         uses: r-lib/actions/setup-pandoc@v1
-      - name: Install R Markdown
-        run: |
-          install.packages(c("remotes", "bookdown", "formatR", "tinytex"))
-          tinytex::install_tinytex()
-        shell: Rscript {0}
-      - name: Install package EcoFoG
-        run: |
-          # cairo for package gdtools
-          brew install cairo
-          Rscript -e 'remotes::install_github("EcoFoG/EcoFoG")'
       - name: Install dependencies
-        run: remotes::install_deps(dependencies = TRUE)
+        run: |
+          options(pkgType = "binary")
+          options(install.packages.check.source = "no")
+          install.packages(c("memoiR", "rmdformats", "tinytex"))
+          tinytex::install_tinytex()
         shell: Rscript {0}
       - name: Render Rmarkdown files
         run: |
-          RMD_PATH=($(ls | grep '[.]Rmd$'))
+          RMD_PATH=($(ls | grep "[.]Rmd$"))
           Rscript -e 'for (file in commandArgs(TRUE)) rmarkdown::render(file, "all")' ${RMD_PATH[*]}
-          Rscript -e 'source("GithubPages.R")'
-          echo 'theme: jekyll-theme-slate' > docs/_config.yml
+          Rscript -e 'memoiR::build_githubpages()'
       - name: Upload artifact
         uses: actions/upload-artifact@v1
         with:
-          name: _docs
-          path: docs/
+          name: ghpages
+          path: docs
   checkout-and-deploy:
     runs-on: ubuntu-latest
     needs: render
@@ -48,9 +41,7 @@ jobs:
       - name: Download artifact
         uses: actions/download-artifact@v1
         with:
-          # Artifact name
-          name: _docs
-          # Destination path
+          name: ghpages
           path: docs
       - name: Deploy to GitHub Pages
         uses: Cecilapp/GitHub-Pages-deploy@v3
