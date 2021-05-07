@@ -11,13 +11,14 @@ lang: fr-FR
 pdftoc: no
 always_allow_html: yes
 output:
+  bookdown::pdf_book:
+    template: latex/template.tex
+    citation_package: natbib
+    latex_engine: xelatex
+    keep_tex: yes
   bookdown::html_document2:
     toc: yes
     toc_float: yes
-    highlight: haddock
-  bookdown::pdf_book:
-    base_format: EcoFoG::memo
-    keep_tex: TRUE
 ---
 
 ```{r DoNotModify, include=FALSE}
@@ -68,10 +69,10 @@ knitr::opts_chunk$set(
   # Graphic device
   dev = "ragg_png",
   # Code chunk format
-  tidy=TRUE, tidy.opts=list(blank=FALSE, width.cutoff=50),
+  tidy=TRUE, tidy.opts=list(blank=FALSE, width.cutoff=70),
   size="scriptsize", knitr.graphics.auto_pdf = TRUE
   )
-options(width=50)
+options(width=70)
 
 # Random seed
 set.seed(973)
